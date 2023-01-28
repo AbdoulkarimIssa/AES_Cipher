@@ -1,5 +1,8 @@
 #include "cipher.h"
 
+unsigned char rcon[4][10] = {
+   {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36},
+   0};
 unsigned char S_Box[16][16] = {
         {0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76},
         {0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0},
@@ -32,8 +35,8 @@ void printTableau(unsigned char tableau[N][N], int ligne, int colone) {
 }
 
 void subBytes(unsigned char stat[N][N]) {
-   printf("\n");
-   printf("subBytes step\n");
+   //printf("\n");
+   //printf("subBytes step\n");
 
    for (int i = 0; i < N; i++) {
       for (int j = 0; j < N; j++) {
@@ -46,8 +49,8 @@ void subBytes(unsigned char stat[N][N]) {
 }
 
 void shiftrow(unsigned char stat[N][N]) {
-   printf("\n");
-   printf("shiftrow step\n");
+  // printf("\n");
+  // printf("shiftrow step\n");
 
    unsigned char tmp[N];
    for (int i = 1; i < N; i++) {
@@ -63,8 +66,8 @@ void shiftrow(unsigned char stat[N][N]) {
 }
 
 void mixColumns(unsigned char stat[N][N]) {
-   printf("\n");
-   printf("mixColumns step\n");
+  // printf("\n");
+  // printf("mixColumns step\n");
    unsigned char s[N];
 
    for (int colone = 0; colone < N; colone++) {
@@ -116,8 +119,8 @@ void multiplicationEtReafectaion(unsigned char stat[N][N], int column, unsigned 
 }
 
 void addRoundKey(unsigned char stat[N][N], unsigned char key[N][N]) {
-   printf("\n");
-   printf("add round key  step\n");
+   //printf("\n");
+   //printf("add round key  step\n");
    for (int i = 0; i < N; i++) {
       for (int j = 0; j < N; j++) {
          stat[i][j] = stat[i][j] ^ key[i][j];
@@ -132,3 +135,90 @@ void InvAddRoundKey(unsigned char stat[N][N]) {
    printf("InvAddroundkey  step\n");
    addRoundKey(stat);
 }*/
+
+
+void generatekey(unsigned char keys[10][N][N]) {
+
+  unsigned char rotword[N];
+  unsigned char tmp[N];
+  for (int numKey = 0; numKey < 10; numKey++) {
+
+   // printf("key %d \n", numKey);
+    f_rotword(keys, numKey, rotword);
+    // calcul de la première colone
+    for (int ligne = 0; ligne < N; ligne++) {
+      keys[numKey + 1][ligne][0] = keys[numKey][ligne][0] ^ rotword[ligne] ^ rcon[ligne][numKey];
+
+    }
+
+    // calcul des valeurs des autres colones
+
+    for (int i = 1; i < N; i++) { //parcours les colones
+      for (int j = 0; j < N; j++) { //parcours les lignes 
+        keys[numKey + 1][j][i] = keys[numKey][j][i] ^ keys[numKey + 1][j][i - 1];
+
+      }
+    }
+
+//     for (int i = 0; i < 4; i++) {
+//       for (int j = 0; j < 4; j++) {
+//         printf("%x |", keys[numKey][i][j]);
+//       }
+
+//       printf("\n");
+//     }
+//     printf("\n\n");
+
+   }
+}
+
+void f_rotword(unsigned char keys[10][N][N], int numKey,unsigned char rotword[N]){
+
+      // copie de la rotword
+      for (int i = 0; i < N; i++) {
+        rotword[i] = keys[numKey][(i + 1) % N][N - 1];
+      }
+      // remplacment des valeurs de la rotword
+     // printf("After subword\n");
+      for (int j = 0; j < N; j++) {
+        int x = (int) rotword[j] >> N;
+        int y = (int) rotword[j] & 0x0F;
+        rotword[j] = S_Box[x][y];
+
+      }
+      
+}
+
+void cipher(unsigned char data[N][N],unsigned char out[N][N], unsigned char keys[11][N][N])
+{
+
+   addRoundKey(data, keys[0]);
+
+    for (int i = 1; i < 10; i++)
+    {
+        //printf("Round %d\n",i);
+        subBytes(data);
+        shiftrow(data);
+        mixColumns(data);
+        addRoundKey(data, keys[i]);
+    }
+    
+    //printTableau(data, N, N);
+    subBytes(data);
+    //printTableau(data, N, N);
+    shiftrow(data);
+    //printTableau(data, N, N);
+    addRoundKey(data, keys[10]);
+
+    // copie dans out
+
+    for (int i = 0; i < N; i++)
+    {
+      for (int j = 0; j < N; j++)
+      {
+        out[i][j] = data[i][j];
+      }
+      
+    }
+    
+}
